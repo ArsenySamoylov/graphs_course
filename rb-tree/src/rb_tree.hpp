@@ -73,10 +73,12 @@ rb_tree<T>::node* rb_tree<T>::rotate(node* n, const int dir) {
   suc->parent_ = par;
   
   if (par) {
-    par->children_[dir] = suc;
+    auto par_dir = par->children_[node::Left] == n ? node::Left : node::Right;
+    par->children_[par_dir] = suc;
   } else {
     assert(n == root_);
-    root_ = par;
+    assert(suc);
+    root_ = suc;
   }
 
   return suc;
