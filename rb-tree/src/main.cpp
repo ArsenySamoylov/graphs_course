@@ -60,7 +60,7 @@ int main() {
         }
         std::print("Preorder: ");
         for (auto v : tree.get_preorder()) {
-            std::cout << v << ", ";
+            std::print("{}({}), ", v.first, v.second ? "R" : "B");
         }
         std::cout << std::endl;
     }

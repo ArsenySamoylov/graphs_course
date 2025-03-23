@@ -30,7 +30,7 @@ class rb_tree : NonCopyable {
     node* bst_insert(T val);
 
     void graphvis_traverse(node*, std::string&);
-    void get_preorder_impl(node*, std::vector<T>&);
+    void get_preorder_impl(node*, std::vector<std::pair<T, bool>>&);
   public:
 
     rb_tree() {}
@@ -42,7 +42,7 @@ class rb_tree : NonCopyable {
 
     // void merge(rb_tree&&);
 
-    std::vector<T> get_preorder();
+    std::vector<std::pair<T, bool>> get_preorder();
     // std::vector<T> get_postorder();
 
     void to_graphvis(std::string&);
@@ -150,18 +150,18 @@ void rb_tree<T>::insert(T val) {
 
 
 template<typename T>
-std::vector<T> rb_tree<T>::get_preorder() {
-  std::vector<T> v;
+std::vector<std::pair<T, bool>> rb_tree<T>::get_preorder() {
+  std::vector<std::pair<T, bool>> v;
   get_preorder_impl(root_, v);
   return v;
 }
 
 template<typename T>
-void rb_tree<T>::get_preorder_impl(node* n, std::vector<T>& v) {
+void rb_tree<T>::get_preorder_impl(node* n, std::vector<std::pair<T, bool>>& v) {
   if (n == nullptr) {
     return;
   }
-  v.push_back(n->val_);
+  v.push_back({n->val_, n->color_});
   get_preorder_impl(n->children_[node::Left], v);
   get_preorder_impl(n->children_[node::Right], v);
 }
