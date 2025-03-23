@@ -48,7 +48,7 @@ int main() {
 
     rb_tree<int> tree;
     int val;
-    while(std::cin >> val) {
+    while(std::cout<<"Input number: ", std::cin >> val) {
         tree.insert(val);
         
         tree.to_graphvis(dot_buf);
@@ -58,6 +58,11 @@ int main() {
             std::cerr << "Can't render =(\n";
             return -1;
         }
+        std::print("Preorder: ");
+        for (auto v : tree.get_preorder()) {
+            std::cout << v << ", ";
+        }
+        std::cout << std::endl;
     }
 
     return 0;
