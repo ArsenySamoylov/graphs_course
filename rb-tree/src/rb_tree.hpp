@@ -31,11 +31,18 @@ class rb_tree : NonCopyable {
 
     void graphvis_traverse(node*, std::string&);
     void get_preorder_impl(node*, std::vector<std::pair<T, bool>>&);
+    void free(node*);
+
   public:
 
     rb_tree() {}
-    // rb_tree(std::initializer_list<T>);
-    // ~rb_tree();
+    rb_tree(std::initializer_list<T> l) {
+      for(auto& v : l) {
+        insert(std::move(v));
+      }
+    }
+
+    ~rb_tree() { free(root_); }
 
     void insert(T val);
     // error_t del(T val);
@@ -43,7 +50,7 @@ class rb_tree : NonCopyable {
     // void merge(rb_tree&&);
 
     std::vector<std::pair<T, bool>> get_preorder();
-    // std::vector<T> get_postorder();
+    size_t size() const { return size_; }
 
     void to_graphvis(std::string&);
 
@@ -146,6 +153,7 @@ void rb_tree<T>::insert(T val) {
   auto *n = bst_insert(val);
   n->color_ = node::Red;
   fix_insert(n);
+  size_++;
 }
 
 
@@ -164,4 +172,19 @@ void rb_tree<T>::get_preorder_impl(node* n, std::vector<std::pair<T, bool>>& v) 
   v.push_back({n->val_, n->color_});
   get_preorder_impl(n->children_[node::Left], v);
   get_preorder_impl(n->children_[node::Right], v);
+}
+
+
+// Other internals
+
+template<typename T>
+void rb_tree<T>::free(node* n) {
+  if (n == nullptr) {
+    return;
+  }
+
+  free(n->children_[node::Left]);
+  free(n->children_[node::Right]);
+
+  delete n;
 }
