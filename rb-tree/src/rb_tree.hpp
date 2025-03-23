@@ -1,9 +1,11 @@
 #pragma once
+
 #include <cstddef>
 #include <initializer_list>
 #include <vector>
 #include <string>
 #include <format>
+#include <cassert>
 
 class NonCopyable {
   public:
@@ -16,27 +18,16 @@ typedef int error_t;
 
 template<typename T>
 class rb_tree : NonCopyable {
-  private:
     using size_t = std::size_t;
 
-    struct node {
-        T val_;
-        node *left_, *right_;
-        bool color_; // true = red, false = black
-
-        static void to_graphvis(node* n, std::string& buf) {
-        if(n) {
-          buf += std::format("\t\tnode_{} [shape = Mrecord label = {}, fillcolor = {}, style=filled]\n", static_cast<void*>(n), n->val_, n->color_ ? "Red" : "Gray");
-        }
-        }
-    };
+    struct node; // see "rb_tree_node.hpp" for definition
 
     node *root_ = nullptr;
     size_t size_ = 0;
 
-    // void left_rotate(node*);
-    // void right_rotate(node*);
-    // void insert_node(node*, node*);
+    node* rotate(node*, int);
+    void fix_insert(node*);
+    node* bst_insert(T val);
 
     void graphvis_traverse(node*, std::string&);
   public:
@@ -57,49 +48,70 @@ class rb_tree : NonCopyable {
 
 };
 
+#include "rb_tree_node.hpp"
+#include "rb_tree_graphvis.hpp"
+
+// Main logic
 template<typename T>
-void rb_tree<T>::to_graphvis(std::string &buf) {
-    buf += "digraph {\nrankdir = TB\n";
-    graphvis_traverse(root_, buf);
-    buf += "\n}\n";
+rb_tree<T>::node* rb_tree<T>::rotate(node* n, const int dir) {
+  assert(n);
+  assert(dir == node::Left || dir == node::Right);
+
+  auto *par = n->parent_;
+  auto *suc = n->children_[node::reverse_dir(dir)];
+  assert(suc);
+  auto *suc_child = suc->children_[dir];
+
+  n->children_[node::reverse_dir(dir)] = suc_child;
+  if (suc_child) {
+    suc_child->parent_ = n;
+  }
+  n->parent_ = suc;
+
+  suc->children_[dir] = n;
+  suc->parent_ = par;
+  
+  if (par) {
+    par->children_[dir] = suc;
+  } else {
+    assert(n == root_);
+    root_ = par;
+  }
+
+  return suc;
 }
 
 template<typename T>
-void rb_tree<T>::graphvis_traverse(node* n, std::string &buf) {
-  if(n == nullptr) {
-    return;
-  }
-
-  node::to_graphvis(n, buf);
-
-  if(n->left_) {
-    node::to_graphvis(n->left_, buf);
-    buf += std::format("\t\tnode_{} -> node_{}\n", static_cast<void*>(n), static_cast<void*>(n->left_));
-    graphvis_traverse(n->left_, buf);
-  }
-
-  if(n->right_) {
-    node::to_graphvis(n->right_, buf);
-    buf += std::format("\t\tnode_{} -> node_{}\n", static_cast<void*>(n), static_cast<void*>(n->right_));
-    graphvis_traverse(n->right_, buf);
-  }
+void rb_tree<T>::fix_insert(node* n) {  
+  (void)n;
 }
+
+template<typename T>
+rb_tree<T>::node* rb_tree<T>::bst_insert(const T val) {
+  auto *n = new rb_tree<T>::node{};
+  n->val_ = val;
+
+  if(root_ == nullptr) {
+    root_ = n;
+    return root_;
+    }
+
+  node *parent = nullptr;
+  node *current = root_;
+  while(true) {
+    parent = current;
+    auto dir = val < current->val_ ? node::Left : node::Right;
+    current = current->children_[dir];
+    
+    if(current == nullptr) {
+      n->parent_ = parent;
+      parent->children_[dir] = n;
+      return n;       
+      }
+    }
+  }
 
 template<typename T>
 void rb_tree<T>::insert(T val) {
-  if(!root_) {
-    root_ = new node{};
-    root_->val_ = val;
-    return;
-  }
-
-  node *n = root_;
-  while(true) {
-    if(!n->right_) {
-      n->right_ = new node{};
-      n->right_->val_ = val;
-      return;
-    }
-    n = n->right_;
-  }
+  fix_insert(bst_insert(val));
 }
