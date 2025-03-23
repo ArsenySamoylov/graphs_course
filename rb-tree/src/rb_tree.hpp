@@ -86,7 +86,34 @@ rb_tree<T>::node* rb_tree<T>::rotate(node* n, const int dir) {
 
 template<typename T>
 void rb_tree<T>::fix_insert(node* n) {  
-  (void)n;
+  while(n != root_ && 
+        n->color_ == node::Red && n->parent_->color_ == node::Red) {
+      auto *parent = n->parent_;
+      auto *grandparent = parent->parent_;
+      
+      const int parent_dir = parent == grandparent->children_[node::Left] ? node::Left : node::Right;
+      node *uncle = grandparent->children_[node::reverse_dir(parent_dir)];
+      if(uncle != nullptr && uncle->color_ == node::Red) {
+        grandparent->color_ = node::Red;
+        parent->color_      = node::Black;
+        uncle->color_       = node::Black;
+        n = grandparent;
+      } else {
+        const int dir = n == parent->children_[node::Left] ? node::Left : node::Right;
+        std::cout << std::endl;
+        if (dir == node::reverse_dir(parent_dir)) {
+          rotate(parent, parent_dir);
+          n = parent;
+          parent = n->parent_;
+        }
+        n = parent;
+        rotate(grandparent, node::reverse_dir(parent_dir));
+        std::swap(parent->color_, grandparent->color_);
+        return;
+        }
+      }
+
+  root_->color_ = node::Black;  
 }
 
 template<typename T>
@@ -116,7 +143,9 @@ rb_tree<T>::node* rb_tree<T>::bst_insert(const T val) {
 
 template<typename T>
 void rb_tree<T>::insert(T val) {
-  fix_insert(bst_insert(val));
+  auto *n = bst_insert(val);
+  n->color_ = node::Red;
+  fix_insert(n);
 }
 
 
