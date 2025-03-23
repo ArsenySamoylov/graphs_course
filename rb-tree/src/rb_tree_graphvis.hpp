@@ -27,7 +27,7 @@ void rb_tree<T>::graphvis_traverse(node* n, std::string &buf) {
     if (child) {
       child->to_graphvis(buf);
       buf += std::format("\t\tnode_{} -> node_{}\n", static_cast<void*>(n), static_cast<void*>(child));
-      graphvis_traverse(n->children_[node::reverse_dir(i)], buf);
+      graphvis_traverse(child, buf);
     }
   }
 }

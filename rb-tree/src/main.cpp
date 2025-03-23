@@ -23,10 +23,6 @@ class graphvisor{
         fs::create_directory(tmp);
     }
 
-    ~graphvisor() {
-        fs::remove_all(tmp);
-    }
-  
     void draw(const std::string& buf) {
         std::ofstream dot{dot_path};
         dot << buf << std::endl;
