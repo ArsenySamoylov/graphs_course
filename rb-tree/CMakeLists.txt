@@ -11,7 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(SRC_FILES src/main.cpp)
 
 if ( UNIX )
-set(CMAKE_CXX_FLAGS_DEBUG "-Werror -Wall -Wextra -fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -Werror -Wall -Wextra -fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 endif()
 
 add_executable(${PROJECT} ${SRC_FILES})
