@@ -50,7 +50,7 @@ class rb_tree : NonCopyable {
 
     void insert(T val);
     // return false if element wasn't found
-    bool del(T val);
+    bool remove(T val);
 
     // void merge(rb_tree&&);
 
@@ -280,7 +280,7 @@ void rb_tree<T>::delete_fixup(node* n) {
 }
 
 template<typename T>
-bool rb_tree<T>::del(T val) {
+bool rb_tree<T>::remove(T val) {
   node* n = bst_prepare_to_delete(val);
   if (n == nullptr) {
     return false;
@@ -309,6 +309,7 @@ bool rb_tree<T>::del(T val) {
     }
   }
 
+  size_--;
   return true;
 }
 

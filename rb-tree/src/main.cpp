@@ -59,7 +59,7 @@ int main() {
         case 'd':
             std::cout<<"Enter number to delete: ";
             std::cin >> val;
-            if(!tree.del(val)) {
+            if(!tree.remove(val)) {
                 std::cout << "Nothing to delete\n";
             }
             break;
