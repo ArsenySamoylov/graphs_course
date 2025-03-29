@@ -47,9 +47,26 @@ int main() {
     std::string dot_buf;
 
     rb_tree<int> tree;
-    int val;
-    while(std::cout<<"Input number: ", std::cin >> val) {
-        tree.insert(val);
+    char cmd;
+    while(std::cout<<"Input command: ", std::cin >> cmd) {
+        int val;
+        switch(cmd) {
+        case 'i':
+            std::cout<<"Enter number to insert: ";
+            std::cin >> val;
+            tree.insert(val);
+            break;
+        case 'd':
+            std::cout<<"Enter number to delete: ";
+            std::cin >> val;
+            if(!tree.del(val)) {
+                std::cout << "Nothing to delete\n";
+            }
+            break;
+        default:
+            std::cout<<"Unrecognized command (valid commands: i,d)\n";
+            break;
+        }
         
         tree.to_graphvis(dot_buf);
         gv.draw(dot_buf);

@@ -4,7 +4,6 @@
 #include <initializer_list>
 #include <vector>
 #include <string>
-#include <format>
 #include <cassert>
 
 class NonCopyable {
@@ -26,8 +25,13 @@ class rb_tree : NonCopyable {
     size_t size_ = 0;
 
     node* rotate(node*, int);
+
     void fix_insert(node*);
     node* bst_insert(T val);
+
+    node* search(T val);
+    node* bst_prepare_to_delete(T val);
+    void delete_fixup(node*);
 
     void graphvis_traverse(node*, std::string&);
     void get_preorder_impl(node*, std::vector<std::pair<T, bool>>&);
@@ -45,7 +49,8 @@ class rb_tree : NonCopyable {
     ~rb_tree() { free(root_); }
 
     void insert(T val);
-    // error_t del(T val);
+    // return false if element wasn't found
+    bool del(T val);
 
     // void merge(rb_tree&&);
 
@@ -174,6 +179,138 @@ void rb_tree<T>::get_preorder_impl(node* n, std::vector<std::pair<T, bool>>& v) 
   get_preorder_impl(n->children_[node::Right], v);
 }
 
+
+// Searches for the *deepest* node
+template<typename T>
+rb_tree<T>::node* rb_tree<T>::search(T val) {
+  node *current = root_;
+  node *result = nullptr;
+
+  while (current != nullptr) {
+    if (current->val_ == val) {
+      result = current;
+    }
+
+    if (current->val_ > val) {
+      current = current->children_[node::Left];
+    } else {
+      current = current->children_[node::Right];
+    }
+  }
+  return result;
+}
+
+template<typename T>
+rb_tree<T>::node* rb_tree<T>::bst_prepare_to_delete(T val) {
+  node *n = search(val);
+  if (n == nullptr) {
+    return nullptr;
+  }
+
+  int n_children = 0;
+  n_children += (n->children_[node::Left] != nullptr);
+  n_children += (n->children_[node::Right] != nullptr);  
+
+  switch(n_children) {
+    case 0:
+      return n;
+    case 1: {
+      int dir = n->children_[node::Left] != nullptr ? node::Left : node::Right;
+      node *child = n->children_[dir];
+      std::swap(n->val_, child->val_);
+      return child;
+    } 
+    case 2: {
+      // Successor - leftmost element in right subtree
+      node *successor = n->children_[node::Right];
+      while (successor != nullptr && successor->children_[node::Left] != nullptr) {
+        successor = successor->children_[node::Left];
+      }
+      std::swap(n->val_, successor->val_);
+      return successor;
+    }
+    default:
+      assert(0 && "Panic");
+  }
+}
+
+template<typename T>
+void rb_tree<T>::delete_fixup(node* n) {
+  while(n != root_ && n->color_ == node::Black) {
+    node *parent = n->parent_;
+    int dir = n == parent->children_[node::Left] ? node::Left : node::Right;
+    node *sibling = parent->children_[node::reverse_dir(dir)];
+
+    if(sibling != nullptr && sibling->color_ == node::Black) {
+      parent->color_ = node::Red;
+      rotate(parent, dir);
+      sibling = parent->children_[node::reverse_dir(dir)];
+    }
+
+    // if sibling->children_ are Black
+    if(sibling != nullptr && 
+       (sibling->children_[node::Left]  == nullptr || sibling->children_[node::Left]->color_  == node::Black) &&
+       (sibling->children_[node::Right] == nullptr || sibling->children_[node::Right]->color_ == node::Black)) {
+      sibling->color_ = node::Red;
+      n = parent;
+      continue;
+      }
+
+    if(sibling != nullptr && 
+       (sibling->children_[node::reverse_dir(dir)]  == nullptr || sibling->children_[node::reverse_dir(dir)]->color_  == node::Black)) {
+      sibling->children_[dir]->color_ = node::Black;
+      sibling->color_ = node::Red;
+      rotate(sibling, node::reverse_dir(dir));
+      sibling = parent->children_[node::reverse_dir(dir)];
+      }
+    
+    if(sibling != nullptr) { 
+      sibling->color_ = parent->color_;
+      node *nephew = sibling->children_[node::reverse_dir(dir)];
+      if(nephew != nullptr) {
+        nephew->color_ = node::Black;
+      }
+    }
+    parent->color_ = node::Black;
+    rotate(parent, dir);
+    n = root_;
+  }
+
+  n->color_ = node::Black;
+}
+
+template<typename T>
+bool rb_tree<T>::del(T val) {
+  node* n = bst_prepare_to_delete(val);
+  if (n == nullptr) {
+    return false;
+  }
+  
+  node *parent = n->parent_;
+  node *successor = n->children_[node::Left] != nullptr ? n->children_[node::Left] : n->children_[node::Right];
+
+  if (parent == nullptr) {
+    root_ = successor;
+  } else {
+    int dir = n == parent->children_[node::Left] ? node::Left : node::Right;
+    parent->children_[dir] = successor;
+  }
+   
+
+  auto n_color = n->color_;
+  delete(n);
+  n = nullptr;
+
+  if(successor != nullptr) {
+    successor->parent_ = parent;
+
+    if (n_color == node::Black) {
+      delete_fixup(successor);
+    }
+  }
+
+  return true;
+}
 
 // Other internals
 
