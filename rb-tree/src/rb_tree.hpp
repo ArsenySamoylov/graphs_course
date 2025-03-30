@@ -31,7 +31,7 @@ class rb_tree : NonCopyable {
     void fix_insert(node*);
     node* bst_insert(T val);
 
-    node* search(T val);
+    node* search(const T& val);
     node* bst_prepare_to_delete(T val);
     void delete_fixup(node*);
 
@@ -42,7 +42,8 @@ class rb_tree : NonCopyable {
     static node* join_left(node*, node*, node*);
     static size_t black_height(node*);
 
-    static bool is_black(node* n) { return n == nullptr || n->color_ == node::Black; } 
+    static bool is_black(node* n) { return n == nullptr || n->color_ == node::Black; }
+    static bool is_red  (node* n) { return n != nullptr && n->color_ == node::Red; }
 
     void free(node*);
 
@@ -65,6 +66,7 @@ class rb_tree : NonCopyable {
     bool remove(T val);
 
     void merge(rb_tree&&);
+    bool contains(T&);
 
     std::vector<std::pair<T, bool>> get_preorder();
     size_t size() const { return size_; }
@@ -100,10 +102,11 @@ rb_tree<T>::node* rb_tree<T>::rotate(rb_tree<T>* tree, node* n, const int dir) {
     auto par_dir = par->children_[node::Left] == n ? node::Left : node::Right;
     par->children_[par_dir] = suc;
   } else {
-    assert(tree);
-    assert(n == tree->root_);
-    assert(suc);
-    tree->root_ = suc;
+    if(tree != nullptr) {
+      assert(n == tree->root_);
+      assert(suc);
+      tree->root_ = suc;
+    }
   }
 
   return suc;
@@ -112,13 +115,13 @@ rb_tree<T>::node* rb_tree<T>::rotate(rb_tree<T>* tree, node* n, const int dir) {
 template<typename T>
 void rb_tree<T>::fix_insert(node* n) {  
   while(n != root_ && 
-        n->color_ == node::Red && n->parent_->color_ == node::Red) {
+        is_red(n) && is_red(n->parent_)) {
       auto *parent = n->parent_;
       auto *grandparent = parent->parent_;
       
       const int parent_dir = parent == grandparent->children_[node::Left] ? node::Left : node::Right;
       node *uncle = grandparent->children_[node::reverse_dir(parent_dir)];
-      if(uncle != nullptr && uncle->color_ == node::Red) {
+      if(uncle != nullptr && is_red(uncle)) {
         grandparent->color_ = node::Red;
         parent->color_      = node::Black;
         uncle->color_       = node::Black;
@@ -194,7 +197,7 @@ void rb_tree<T>::get_preorder_impl(node* n, std::vector<std::pair<T, bool>>& v) 
 
 // Searches for the *deepest* node
 template<typename T>
-rb_tree<T>::node* rb_tree<T>::search(T val) {
+rb_tree<T>::node* rb_tree<T>::search(const T& val) {
   node *current = root_;
   node *result = nullptr;
 
@@ -360,8 +363,7 @@ template<typename T>
 rb_tree<T>::node* rb_tree<T>::join(node *l, node *separator, node *r) {
     if(black_height(l) > black_height(r)) {
       node *n = join_right(l, separator, r);
-      if(n->color_ == node::Red && 
-         (n->children_[node::Right] != nullptr && n->children_[node::Right]->color_ == node::Red)) {
+      if(is_red(n) && is_red(n->children_[node::Right])) {
          n->color_ = node::Black;
          }
       return n;
@@ -369,8 +371,7 @@ rb_tree<T>::node* rb_tree<T>::join(node *l, node *separator, node *r) {
 
     if(black_height(l) < black_height(r)) {
       node *n = join_left(l, separator, r);
-      if(n->color_ == node::Red && 
-         (n->children_[node::Left] != nullptr && n->children_[node::Left]->color_ == node::Red)) {
+      if(is_red(n) && is_red(n->children_[node::Left])) {
          n->color_ = node::Black;
          }
       return n;
@@ -397,6 +398,8 @@ rb_tree<T>::node* rb_tree<T>::join(node *l, node *separator, node *r) {
 
 template<typename T>
 rb_tree<T>::node* rb_tree<T>::join_right(node *l, node *separator, node *r) {
+  assert(separator);
+
   if(is_black(l) && black_height(l) == black_height(r)) {
     separator->color_ = node::Red;
     separator->children_[node::Left] = l;
@@ -418,8 +421,7 @@ rb_tree<T>::node* rb_tree<T>::join_right(node *l, node *separator, node *r) {
   l->parent_ = nullptr;
 
   if(is_black(l) && 
-     l->children_[node::Right]->color_ == l->children_[node::Right]->children_[node::Right]->color_ &&
-     l->children_[node::Right]->color_ == node::Red) {
+     is_red(l->children_[node::Right]) && is_red(l->children_[node::Right]->children_[node::Right])) {
     l->children_[node::Right]->children_[node::Right]->color_ = node::Black;
     return rotate(nullptr, l, node::Left);
     } 
@@ -452,8 +454,7 @@ rb_tree<T>::node* rb_tree<T>::join_left(node *l, node *separator, node *r) {
   r->parent_ = nullptr;
 
   if(is_black(r) && 
-    r->children_[node::Left]->color_ == r->children_[node::Left]->children_[node::Left]->color_ &&
-    r->children_[node::Left]->color_ == node::Red) {
+    is_red(r->children_[node::Left]) && is_red(r->children_[node::Left]->children_[node::Left])) {
     r->children_[node::Left]->children_[node::Left]->color_ = node::Black;
     return rotate(nullptr, r, node::Right);
     } 
@@ -475,13 +476,24 @@ return cnt;
 
 template<typename T>
 void rb_tree<T>::merge(rb_tree<T> &&other) {
+  if(&other == this) {
+    return;
+  }
   root_ = unite(root_, other.root_);
+  if(root_ != nullptr) {
+    root_->color_ = node::Black;
+  }
+
   size_ += other.size_; // TODO this may be not valid because we allocating new nodes
 
   other.root_ = nullptr;
   other.size_ = 0;
 }
 
+template<typename T>
+bool rb_tree<T>::contains(T& val) {
+  return search(val) != nullptr;
+}
 // Other internals
 
 template<typename T>

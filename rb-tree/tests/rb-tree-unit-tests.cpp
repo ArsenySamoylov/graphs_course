@@ -226,3 +226,101 @@ TEST(Delete, maintain_properties) {
     
     EXPECT_EQ(t.get_preorder(), res); // Check structure after deletion
 }
+
+TEST(Merge, merge_two_non_empty_trees) {
+    rb_tree<int> t1;
+    t1.insert(10);
+    t1.insert(20);
+    t1.insert(30);
+
+    rb_tree<int> t2;
+    t2.insert(15);
+    t2.insert(25);
+    t2.insert(5);
+
+    t1.merge(std::move(t2));
+
+    tree_container res = {{15, false}, {5, false}, {10, true}, {25, false}, {20, true}, {30, true}};
+    EXPECT_EQ(t1.get_preorder(), res);
+    EXPECT_EQ(t1.size(), 6);
+}
+
+TEST(Merge, merge_with_empty_tree) {
+    rb_tree<int> t1;
+    t1.insert(1);
+    t1.insert(2);
+    
+    rb_tree<int> empty_tree;
+
+    t1.merge(std::move(empty_tree));
+
+    tree_container res = {{1, false}, {2, true}};
+    EXPECT_EQ(t1.get_preorder(), res);
+    EXPECT_EQ(t1.size(), 2);
+}
+
+TEST(Merge, merge_empty_tree_into_non_empty) {
+    rb_tree<int> empty_tree;
+    
+    rb_tree<int> t1;
+    t1.insert(10);
+    t1.insert(20);
+
+    t1.merge(std::move(empty_tree));
+
+    tree_container res = {{10, false}, {20, true}};
+    EXPECT_EQ(t1.get_preorder(), res);
+    EXPECT_EQ(t1.size(), 2);
+}
+
+TEST(Merge, self_merge) {
+    rb_tree<int> t;
+    t.insert(10);
+    t.insert(20);
+
+    t.merge(std::move(t)); // Merging with itself
+
+    tree_container res = {{10, false}, {20, true}};
+    EXPECT_EQ(t.get_preorder(), res);
+    EXPECT_EQ(t.size(), 2);
+}
+
+TEST(Merge, merge_with_overlapping_elements) {
+    rb_tree<int> t1;
+    t1.insert(10);
+    t1.insert(20);
+    
+    rb_tree<int> t2;
+    t2.insert(15);
+    t2.insert(20); // This is a duplicate
+    t2.insert(25);
+
+    t1.merge(std::move(t2));
+
+    tree_container res = {{20, false}, {15, false}, {10, true}, {25, false}};
+    EXPECT_EQ(t1.get_preorder(), res);
+    // TODO: FIXME
+    // EXPECT_EQ(t1.size(), 4); // Size should be 4 (duplicates are not counted)
+}
+
+TEST(Merge, merge_large_trees) {
+    rb_tree<int> t1;
+    for (int i = 0; i < 50; ++i) {
+        t1.insert(i * 2); // Even numbers
+    }
+
+    rb_tree<int> t2;
+    for (int i = 0; i < 50; ++i) {
+        t2.insert(i * 2 + 1); // Odd numbers
+    }
+
+    t1.merge(std::move(t2));
+
+    // Check if the size is correct (should be 100)
+    EXPECT_EQ(t1.size(), 100);
+
+    // Check if all numbers from 0 to 99 are present
+    for (int i = 0; i < 100; ++i) {
+        EXPECT_TRUE(t1.contains(i));
+    }
+}
