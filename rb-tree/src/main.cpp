@@ -9,6 +9,8 @@
 
 void greeting() {
     std::println("Hello, this is Red-Black Tree CLI.");
+    std::println("Enter one of following commands:");
+    std::println("\ti <val> - insert\n\td <val> - delete\n\ts - switch to 2nd rb tree\n\tm - merge 1st and 2nd trees (and switch to 1st)\n\tq - quit");
 }
 
 
