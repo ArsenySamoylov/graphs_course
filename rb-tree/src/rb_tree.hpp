@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <initializer_list>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 #include <string>
@@ -16,6 +17,8 @@ class NonCopyable {
 
 typedef int error_t;
 
+namespace rb {
+
 template<typename T>
 class rb_tree : NonCopyable {
   // fields
@@ -29,10 +32,10 @@ class rb_tree : NonCopyable {
     static node* rotate(rb_tree<T>*, node*, int);
 
     void fix_insert(node*);
-    node* bst_insert(T val);
+    node* bst_insert(T&& val);
 
     node* search(const T& val);
-    node* bst_prepare_to_delete(T val);
+    node* bst_prepare_to_delete(const T& val);
     void delete_fixup(node*);
 
     static std::pair<node*, node*> split(node*, node*);
@@ -41,9 +44,6 @@ class rb_tree : NonCopyable {
     static node* join_right(node*, node*, node*);
     static node* join_left(node*, node*, node*);
     static size_t black_height(node*);
-
-    static bool is_black(node* n) { return n == nullptr || n->color_ == node::Black; }
-    static bool is_red  (node* n) { return n != nullptr && n->color_ == node::Red; }
 
     void free(node*);
 
@@ -82,25 +82,24 @@ class rb_tree : NonCopyable {
 template<typename T>
 rb_tree<T>::node* rb_tree<T>::rotate(rb_tree<T>* tree, node* n, const int dir) {
   assert(n);
-  assert(dir == node::Left || dir == node::Right);
 
-  auto *par = n->parent_;
-  auto *suc = n->children_[node::reverse_dir(dir)];
+  node *par = n->parent_;
+  node *suc = n->child(node::reverse_dir(dir));
   assert(suc);
-  auto *suc_child = suc->children_[dir];
+  node *suc_child = suc->child(dir);
 
-  n->children_[node::reverse_dir(dir)] = suc_child;
+  n->child(node::reverse_dir(dir)) = suc_child;
   if (suc_child) {
     suc_child->parent_ = n;
   }
   n->parent_ = suc;
 
-  suc->children_[dir] = n;
+  suc->child(dir) = n;
   suc->parent_ = par;
   
   if (par) {
-    auto par_dir = par->children_[node::Left] == n ? node::Left : node::Right;
-    par->children_[par_dir] = suc;
+    auto par_dir = par->left() == n ? node::Left : node::Right;
+    par->child(par_dir) = suc;
   } else {
     if(tree != nullptr) {
       assert(n == tree->root_);
@@ -115,19 +114,19 @@ rb_tree<T>::node* rb_tree<T>::rotate(rb_tree<T>* tree, node* n, const int dir) {
 template<typename T>
 void rb_tree<T>::fix_insert(node* n) {  
   while(n != root_ && 
-        is_red(n) && is_red(n->parent_)) {
+        node::is_red(n) && node::is_red(n->parent_)) {
       auto *parent = n->parent_;
       auto *grandparent = parent->parent_;
       
-      const int parent_dir = parent == grandparent->children_[node::Left] ? node::Left : node::Right;
-      node *uncle = grandparent->children_[node::reverse_dir(parent_dir)];
-      if(uncle != nullptr && is_red(uncle)) {
+      const int parent_dir = parent == grandparent->left() ? node::Left : node::Right;
+      node *uncle = grandparent->child(node::reverse_dir(parent_dir));
+      if(uncle != nullptr && node::is_red(uncle)) {
         grandparent->color_ = node::Red;
         parent->color_      = node::Black;
         uncle->color_       = node::Black;
         n = grandparent;
       } else {
-        const int dir = n == parent->children_[node::Left] ? node::Left : node::Right;
+        const int dir = n == parent->left() ? node::Left : node::Right;
         if (dir == node::reverse_dir(parent_dir)) {
           rotate(this, parent, parent_dir);
           n = parent;
@@ -144,9 +143,9 @@ void rb_tree<T>::fix_insert(node* n) {
 }
 
 template<typename T>
-rb_tree<T>::node* rb_tree<T>::bst_insert(const T val) {
+rb_tree<T>::node* rb_tree<T>::bst_insert(T&& val) {
   auto *n = new rb_tree<T>::node{};
-  n->val_ = val;
+  n->val_ = std::move(val);
 
   if(root_ == nullptr) {
     root_ = n;
@@ -158,11 +157,11 @@ rb_tree<T>::node* rb_tree<T>::bst_insert(const T val) {
   while(true) {
     parent = current;
     auto dir = val < current->val_ ? node::Left : node::Right;
-    current = current->children_[dir];
+    current = current->child(dir);
     
     if(current == nullptr) {
       n->parent_ = parent;
-      parent->children_[dir] = n;
+      parent->child(dir) = n;
       return n;       
       }
     }
@@ -170,7 +169,7 @@ rb_tree<T>::node* rb_tree<T>::bst_insert(const T val) {
 
 template<typename T>
 void rb_tree<T>::insert(T val) {
-  auto *n = bst_insert(val);
+  auto *n = bst_insert(std::move(val));
   n->color_ = node::Red;
   fix_insert(n);
   size_++;
@@ -190,8 +189,8 @@ void rb_tree<T>::get_preorder_impl(node* n, std::vector<std::pair<T, bool>>& v) 
     return;
   }
   v.push_back({n->val_, n->color_});
-  get_preorder_impl(n->children_[node::Left], v);
-  get_preorder_impl(n->children_[node::Right], v);
+  get_preorder_impl(n->left(), v);
+  get_preorder_impl(n->right(), v);
 }
 
 
@@ -207,81 +206,82 @@ rb_tree<T>::node* rb_tree<T>::search(const T& val) {
     }
 
     if (current->val_ > val) {
-      current = current->children_[node::Left];
+      current = current->left();
     } else {
-      current = current->children_[node::Right];
+      current = current->right();
     }
   }
   return result;
 }
 
 template<typename T>
-rb_tree<T>::node* rb_tree<T>::bst_prepare_to_delete(T val) {
+rb_tree<T>::node* rb_tree<T>::bst_prepare_to_delete(const T& val) {
   node *n = search(val);
   if (n == nullptr) {
     return nullptr;
   }
 
   int n_children = 0;
-  n_children += (n->children_[node::Left] != nullptr);
-  n_children += (n->children_[node::Right] != nullptr);  
+  n_children += (n->left() != nullptr);
+  n_children += (n->right() != nullptr);  
 
   switch(n_children) {
     case 0:
       return n;
     case 1: {
-      int dir = n->children_[node::Left] != nullptr ? node::Left : node::Right;
-      node *child = n->children_[dir];
+      int dir = n->left() != nullptr ? node::Left : node::Right;
+      node *child = n->child(dir);
       std::swap(n->val_, child->val_);
       return child;
     } 
     case 2: {
       // Successor - leftmost element in right subtree
-      node *successor = n->children_[node::Right];
-      while (successor != nullptr && successor->children_[node::Left] != nullptr) {
-        successor = successor->children_[node::Left];
+      node *successor = n->right();
+      while (successor != nullptr && successor->left() != nullptr) {
+        successor = successor->left();
       }
       std::swap(n->val_, successor->val_);
       return successor;
     }
     default:
       assert(0 && "Panic");
+      throw std::runtime_error("Unexpected number of children in rb_tree");
   }
 }
 
 template<typename T>
 void rb_tree<T>::delete_fixup(node* n) {
-  while(n != root_ && is_black(n)) {
+  while(n != root_ && node::is_black(n)) {
     node *parent = n->parent_;
-    int dir = n == parent->children_[node::Left] ? node::Left : node::Right;
-    node *sibling = parent->children_[node::reverse_dir(dir)];
+    int dir = n == parent->left() ? node::Left : node::Right;
+    node *sibling = parent->child(node::reverse_dir(dir));
 
-    if(is_black(sibling)) {
+    if(node::is_black(sibling)) {
       parent->color_ = node::Red;
       rotate(this, parent, dir);
-      sibling = parent->children_[node::reverse_dir(dir)];
+      sibling = parent->child(node::reverse_dir(dir));
     }
 
     // if sibling->children_ are Black
     if(sibling != nullptr && 
-       is_black(sibling->children_[node::Left]) &&
-       is_black(sibling->children_[node::Right])) {
+       node::is_black(sibling->left()) &&
+       node::is_black(sibling->right())) {
       sibling->color_ = node::Red;
       n = parent;
       continue;
       }
 
     if(sibling != nullptr && 
-       is_black(sibling->children_[node::reverse_dir(dir)])) {
-      sibling->children_[dir]->color_ = node::Black;
+       node::is_black(sibling->child(node::reverse_dir(dir)))) {
+      sibling->child(dir)->color_ = node::Black;
       sibling->color_ = node::Red;
       rotate(this, sibling, node::reverse_dir(dir));
-      sibling = parent->children_[node::reverse_dir(dir)];
+      sibling = parent->child(node::reverse_dir(dir));
       }
     
     if(sibling != nullptr) { 
       sibling->color_ = parent->color_;
-      node *nephew = sibling->children_[node::reverse_dir(dir)];
+      node *nephew = sibling->child(node::reverse_dir(dir));
       if(nephew != nullptr) {
         nephew->color_ = node::Black;
       }
@@ -302,13 +302,13 @@ bool rb_tree<T>::remove(T val) {
   }
   
   node *parent = n->parent_;
-  node *successor = n->children_[node::Left] != nullptr ? n->children_[node::Left] : n->children_[node::Right];
+  node *successor = n->left() != nullptr ? n->left() : n->right();
 
   if (parent == nullptr) {
     root_ = successor;
   } else {
-    int dir = n == parent->children_[node::Left] ? node::Left : node::Right;
-    parent->children_[dir] = successor;
+    int dir = n == parent->left() ? node::Left : node::Right;
+    parent->child(dir) = successor;
   }
    
 
@@ -338,8 +338,8 @@ rb_tree<T>::node* rb_tree<T>::unite(node* t1, node* t2) {
   }
 
   auto [left, right] = split(t1, t2);
-  node* new_left  = unite(left,  t2->children_[node::Left]);
-  node* new_right = unite(right, t2->children_[node::Right]);
+  node* new_left  = unite(left,  t2->left());
+  node* new_right = unite(right, t2->right());
   return join(new_left, t2, new_right);
 }
 
@@ -349,21 +349,21 @@ std::pair<typename rb_tree<T>::node*, typename rb_tree<T>::node*> rb_tree<T>::sp
     return {nullptr, nullptr};
   }
   if(n->val_ == separator->val_) {
-    return {n->children_[node::Left], n->children_[node::Right]};
+    return {n->left(), n->right()};
   }
   if(separator->val_ < n->val_) {
-    auto [left, right] = split(n->children_[node::Left], separator);
-    return {left, join(right, n, n->children_[node::Right])};
+    auto [left, right] = split(n->left(), separator);
+    return {left, join(right, n, n->right())};
   }
-  auto [left, right] = split(n->children_[node::Right], separator);
-  return {join(n->children_[node::Left], n, left), right};
+  auto [left, right] = split(n->right(), separator);
+  return {join(n->left(), n, left), right};
 }
 
 template<typename T>
 rb_tree<T>::node* rb_tree<T>::join(node *l, node *separator, node *r) {
     if(black_height(l) > black_height(r)) {
       node *n = join_right(l, separator, r);
-      if(is_red(n) && is_red(n->children_[node::Right])) {
+      if(node::is_red(n) && node::is_red(n->right())) {
          n->color_ = node::Black;
          }
       return n;
@@ -371,14 +371,14 @@ rb_tree<T>::node* rb_tree<T>::join(node *l, node *separator, node *r) {
 
     if(black_height(l) < black_height(r)) {
       node *n = join_left(l, separator, r);
-      if(is_red(n) && is_red(n->children_[node::Left])) {
+      if(node::is_red(n) && node::is_red(n->left())) {
          n->color_ = node::Black;
          }
       return n;
     }
 
-    separator->children_[node::Left] = l;
-    separator->children_[node::Right] = r;
+    separator->left() = l;
+    separator->right() = r;
     if(l != nullptr) {
       l->parent_ = separator;
     }
@@ -386,7 +386,7 @@ rb_tree<T>::node* rb_tree<T>::join(node *l, node *separator, node *r) {
       r->parent_ = separator;
     }
     
-    if(is_black(l) && is_black(r)) {
+    if(node::is_black(l) && node::is_black(r)) {
       separator->color_ = node::Red;
     } else {
       separator->color_ = node::Black;
@@ -400,10 +400,10 @@ template<typename T>
 rb_tree<T>::node* rb_tree<T>::join_right(node *l, node *separator, node *r) {
   assert(separator);
 
-  if(is_black(l) && black_height(l) == black_height(r)) {
+  if(node::is_black(l) && black_height(l) == black_height(r)) {
     separator->color_ = node::Red;
-    separator->children_[node::Left] = l;
-    separator->children_[node::Right] = r;
+    separator->left() = l;
+    separator->right() = r;
     if(l != nullptr) {
       l->parent_ = separator;
     }
@@ -414,15 +414,15 @@ rb_tree<T>::node* rb_tree<T>::join_right(node *l, node *separator, node *r) {
     return separator;
   }
 
-  node *right_join = join_right(l->children_[node::Right], separator, r);;
+  node *right_join = join_right(l->right(), separator, r);;
   right_join->parent_ = l;
 
-  l->children_[node::Right] = right_join;
+  l->right() = right_join;
   l->parent_ = nullptr;
 
-  if(is_black(l) && 
-     is_red(l->children_[node::Right]) && is_red(l->children_[node::Right]->children_[node::Right])) {
-    l->children_[node::Right]->children_[node::Right]->color_ = node::Black;
+  if(node::is_black(l) && 
+     node::is_red(l->right()) && node::is_red(l->right()->right())) {
+    l->right()->right()->color_ = node::Black;
     return rotate(nullptr, l, node::Left);
     } 
 
@@ -432,10 +432,10 @@ rb_tree<T>::node* rb_tree<T>::join_right(node *l, node *separator, node *r) {
 template<typename T>
 rb_tree<T>::node* rb_tree<T>::join_left(node *l, node *separator, node *r) {
   
-  if(is_black(r) && black_height(l) == black_height(r)) {
+  if(node::is_black(r) && black_height(l) == black_height(r)) {
     separator->color_ = node::Red;
-    separator->children_[node::Left] = l;
-    separator->children_[node::Right] = r;
+    separator->left() = l;
+    separator->right() = r;
     if(l != nullptr) {
       l->parent_ = separator;
     }
@@ -447,15 +447,15 @@ rb_tree<T>::node* rb_tree<T>::join_left(node *l, node *separator, node *r) {
   }
 
 
-  node *left_join = join_left(l, separator, r->children_[node::Left]);;
+  node *left_join = join_left(l, separator, r->left());;
   left_join->parent_ = r;
 
-  r->children_[node::Left] = left_join;
+  r->left() = left_join;
   r->parent_ = nullptr;
 
-  if(is_black(r) && 
-    is_red(r->children_[node::Left]) && is_red(r->children_[node::Left]->children_[node::Left])) {
-    r->children_[node::Left]->children_[node::Left]->color_ = node::Black;
+  if(node::is_black(r) && 
+    node::is_red(r->left()) && node::is_red(r->left()->left())) {
+    r->left()->left()->color_ = node::Black;
     return rotate(nullptr, r, node::Right);
     } 
 
@@ -466,10 +466,10 @@ template<typename T>
 size_t rb_tree<T>::black_height(node* n) {
   size_t cnt = 0;
   while(n != nullptr) {
-    if(is_black(n)) {
+    if(node::is_black(n)) {
       cnt++;
     }
-    n = n->children_[node::Left] != nullptr ? n->children_[node::Left] : n->children_[node::Right];
+    n = n->left() != nullptr ? n->left() : n->right();
 }
 return cnt;
 }
@@ -502,8 +502,10 @@ void rb_tree<T>::free(node* n) {
     return;
   }
 
-  free(n->children_[node::Left]);
-  free(n->children_[node::Right]);
+  free(n->left());
+  free(n->right());
 
   delete n;
 }
+
+} // namespace rb

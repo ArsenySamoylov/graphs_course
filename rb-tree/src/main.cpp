@@ -47,7 +47,7 @@ int main() {
     graphvisor gv;
     std::string dot_buf;
     
-    std::vector<rb_tree<int>> trees(2);
+    std::vector<rb::rb_tree<int>> trees(2);
     int id = 0;
 
     char cmd;

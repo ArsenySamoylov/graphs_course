@@ -25,4 +25,20 @@ struct rb_tree<T>::node{
     }
         
     void to_graphvis(std::string&);
+
+    node*& left() {
+        return children_[Left];
+    }
+
+    node*& right() {
+        return children_[Right];
+    }
+
+    node*& child(int dir) {
+        assert(dir == Left || dir == Right);
+        return children_[dir];
+    }
+
+    static bool is_black(node* n) { return n == nullptr || n->color_ == node::Black; }
+    static bool is_red  (node* n) { return n != nullptr && n->color_ == node::Red; }
 };

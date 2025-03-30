@@ -6,6 +6,7 @@
 
 using val_color = std::pair<int, bool>;
 using tree_container = std::vector<val_color>;
+using namespace rb;
 
 TEST(Basic, empty) {
     rb_tree<int> t;
