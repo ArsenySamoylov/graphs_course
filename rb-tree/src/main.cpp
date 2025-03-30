@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 #include "rb_tree.hpp"
 
@@ -45,8 +46,10 @@ int main() {
     greeting();
     graphvisor gv;
     std::string dot_buf;
+    
+    std::vector<rb_tree<int>> trees(2);
+    int id = 0;
 
-    rb_tree<int> tree;
     char cmd;
     while(std::cout<<"Input command: ", std::cin >> cmd) {
         int val;
@@ -54,21 +57,30 @@ int main() {
         case 'i':
             std::cout<<"Enter number to insert: ";
             std::cin >> val;
-            tree.insert(val);
+            trees[id].insert(val);
             break;
         case 'd':
             std::cout<<"Enter number to delete: ";
             std::cin >> val;
-            if(!tree.remove(val)) {
+            if(!trees[id].remove(val)) {
                 std::cout << "Nothing to delete\n";
             }
+            break;
+        case 's':
+            id = id == 0 ? 1 : 0;
+            std::println("Swithced to tree {}\n", id);
+            break;
+        case 'm':
+            std::cout<<"Merging trees (and switching to default tree)\n";
+            id = 0;
+            trees[0].merge(std::move(trees[1]));
             break;
         default:
             std::cout<<"Unrecognized command (valid commands: i,d)\n";
             break;
         }
         
-        tree.to_graphvis(dot_buf);
+        trees[id].to_graphvis(dot_buf);
         gv.draw(dot_buf);
         dot_buf.clear();
         if (gv.render()) {
@@ -76,7 +88,7 @@ int main() {
             return -1;
         }
         std::print("Preorder: ");
-        for (auto v : tree.get_preorder()) {
+        for (auto v : trees[id].get_preorder()) {
             std::print("{}({}), ", v.first, v.second ? "R" : "B");
         }
         std::cout << std::endl;
