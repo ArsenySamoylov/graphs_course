@@ -75,6 +75,8 @@ int main() {
             id = 0;
             trees[0].merge(std::move(trees[1]));
             break;
+        case 'q':
+            return 0;
         default:
             std::cout<<"Unrecognized command (valid commands: i,d)\n";
             break;
