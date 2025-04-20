@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 enable_testing()
 
-set(TEST_EXE Jonson-unit-tests.out)
+set(TEST_EXE jonson-unit-tests.out)
 
-set(TESTS_SRC Jonson-unit-tests.cpp)
+set(TESTS_SRC jonson-unit-tests.cpp)
 include_directories(../src)
 add_executable(${TEST_EXE} ${TESTS_SRC})
 
