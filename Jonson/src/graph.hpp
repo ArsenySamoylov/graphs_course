@@ -55,7 +55,7 @@ public:
     bool contains(vertex_type v) const { return g_.contains(v); }
 };
 
-using distance_t         = std::size_t;
+using distance_t         = ssize_t;
 using vertex_t           = weightedAdjListGraph::vertex_type;
 using opt_dist_vect_type = std::optional<std::vector<distance_t>>; 
 

@@ -24,6 +24,9 @@ inline opt_dist_vect_type dijkstra(vertex_t src, const weightedAdjListGraph& g) 
         q.pop();
         
         for(auto [v, w] : g.getAdjList(u)) {
+            if(w < 0)
+                return std::nullopt;
+
             if(dist[v] > dist[u] + w) {
                 dist[v] = dist[u] + w;
                 q.push({dist[v], v});
