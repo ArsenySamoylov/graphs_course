@@ -3,7 +3,12 @@ enable_testing()
 
 set(TEST_EXE jonson-unit-tests.out)
 
-set(TESTS_SRC jonson-unit-tests.cpp)
+set(TESTS_SRC
+            dijkstra-unit-tests.cpp
+            bellman-ford-unit-tests.cpp
+            jonson-unit-tests.cpp
+            )
+
 include_directories(../src)
 add_executable(${TEST_EXE} ${TESTS_SRC})
 
