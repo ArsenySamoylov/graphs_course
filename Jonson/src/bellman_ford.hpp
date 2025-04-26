@@ -15,7 +15,7 @@ inline opt_dist_vect_type bellmanFord(vertex_t src, const weightedAdjListGraph& 
     for(vertex_t _ = 0; _ < V - 1; ++_) {
         for(vertex_t u = 0; u < V; u++) {
             for(auto [v, w] : g.getAdjList(u)) {
-                if(dist[v] > dist[u] + w) {
+                if(dist[u] != InfDist && dist[v] > dist[u] + w) {
                     dist[v] = dist[u] + w;
                 }
             }

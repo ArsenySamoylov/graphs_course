@@ -61,3 +61,21 @@ TEST(BellmanFord, EmptyGraph) {
     auto result = bellmanFord(0, g); // Assuming vertex 0 does not exist in an empty graph
     ASSERT_FALSE(result.has_value()); // Should return nullopt since vertex does not exist
 }
+
+TEST(BellmanFord, NonZeroSource) {
+    // Create a simple graph with undirected edges
+    weightedAdjListGraph g;
+    g.addVertex(0);
+    g.addVertex(1);
+    g.addVertex(2);
+    g.addEdge(0, {1, 4}); // Undirected edge from 0 to 1 with weight 4
+    g.addEdge(0, {2, 1}); // Undirected edge from 0 to 2 with weight 1
+    g.addEdge(2, {1, 2}); // Undirected edge from 2 to 1 with weight 2
+
+    auto result = bellmanFord(1, g);
+    ASSERT_TRUE(result.has_value());
+
+    // Check distances
+    EXPECT_EQ(result.value()[0], 3); // Distance from 0 to 1
+    EXPECT_EQ(result.value()[2], 2); // Distance from 1 to 2
+}
