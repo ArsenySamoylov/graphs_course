@@ -16,7 +16,7 @@ inline opt_dist_vect_type dijkstra(vertex_t src, const weightedAdjListGraph& g) 
     std::priority_queue<dist_and_vert_t, std::vector<dist_and_vert_t>, std::greater<dist_and_vert_t>> q;
     std::vector<distance_t> dist(g.V(), InfDist);
 
-    q.push({src, 0});
+    q.push({0, src});
     dist[src] = 0;
 
     while(!q.empty()) {
