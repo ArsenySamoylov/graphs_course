@@ -1,10 +1,11 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 
 #include "graph.hpp"
 
-inline opt_dist_vect_type bellmanFord(vertex_t src, const weightedAdjListGraph& g) {
+inline std::optional<dist_vect_t> bellmanFord(vertex_t src, const weightedAdjListGraph& g) {
     if(!g.contains(src))
         return std::nullopt;
     

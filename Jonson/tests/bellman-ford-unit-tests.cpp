@@ -24,9 +24,9 @@ TEST(BellmanFord, GraphWithNegativeWeights) {
     g.addVertex(0);
     g.addVertex(1);
     g.addVertex(2);
-    g.addEdge(0, {1, -2}, true); // Edge from 0 to 1 with weight -2
-    g.addEdge(1, {2, -3}, true); // Edge from 1 to 2 with weight -3
-    g.addEdge(0, {2,  4}, true); // Edge from 0 to 2 with weight 4
+    g.addEdge(0, {1, -2}, weightedAdjListGraph::EdgeOrientation::Oriented); // Edge from 0 to 1 with weight -2
+    g.addEdge(1, {2, -3}, weightedAdjListGraph::EdgeOrientation::Oriented); // Edge from 1 to 2 with weight -3
+    g.addEdge(0, {2,  4}, weightedAdjListGraph::EdgeOrientation::Oriented); // Edge from 0 to 2 with weight 4
 
     auto result = bellmanFord(0, g);
     ASSERT_TRUE(result.has_value());
