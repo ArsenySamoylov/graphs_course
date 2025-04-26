@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.20)
 enable_testing()
 
-set(TEST_EXE jonson-unit-tests.out)
+set(TEST_EXE johnson-unit-tests.out)
 
 set(TESTS_SRC
             dijkstra-unit-tests.cpp
             bellman-ford-unit-tests.cpp
-            jonson-unit-tests.cpp
+            johnson-unit-tests.cpp
             )
 
 include_directories(../src)

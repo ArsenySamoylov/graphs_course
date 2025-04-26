@@ -82,6 +82,7 @@ public:
 
     size_t V() const { return g_.size(); }
     bool contains(vertex_type v) const { return g_.contains(v); }
+    bool empty() const { return g_.empty(); }
 };
 
 using distance_t         = ssize_t;
